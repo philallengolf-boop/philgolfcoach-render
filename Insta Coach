@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phil – Your Online Golf Coach</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #e0f4ff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: #333;
+    }
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    .message {
+      padding: 10px 14px;
+      border-radius: 16px;
+      margin: 6px 0;
+      line-height: 1.4;
+    }
+    .user {
+      background: #d3f1ff;
+      align-self: flex-end;
+    }
+    .bot {
+      background: #f0f0f0;
+      align-self: flex-start;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+    input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 16px;
+      background-color: #0077b6;
+      color: white;
+      cursor: pointer;
+    }
+    .voice-toggle {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <button class="voice-toggle" id="toggleVoice">🔊</button>
+    <div class="messages" id="messages">
+      <div class="message bot">Hi, I’m Phil — your online golf coach. Ask me anything to improve your game!</div>
+    </div>
+    <div class="input-row">
+      <input type="text" id="userInput" placeholder="Type your question..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const messages = document.getElementById('messages');
+    const input = document.getElementById('userInput');
+    const toggleVoice = document.getElementById('toggleVoice');
+    let voiceOn = true;
+
+    toggleVoice.onclick = () => {
+      voiceOn = !voiceOn;
+      toggleVoice.textContent = voiceOn ? '🔊' : '🔇';
+    };
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage(text, 'user');
+      input.value = '';
+      addMessage('Phil is thinking…', 'bot', true);
+
+      try {
+        const res = await fetch('https://fast-ai-golfcoach.onrender.com/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+
+        const data = await res.json();
+        messages.lastChild.remove(); // remove "thinking..."
+        addMessage(data.reply || "I'm here to help with your swing!", 'bot');
+
+        if (voiceOn && data.reply) {
+          const utterance = new SpeechSynthesisUtterance(data.reply);
+          utterance.lang = 'en-GB';
+          speechSynthesis.speak(utterance);
+        }
+
+      } catch (e) {
+        messages.lastChild.remove();
+        addMessage('Sorry — something went wrong. Please try again.', 'bot');
+      }
+    }
+
+    function addMessage(text, sender, temp=false) {
+      const div = document.createElement('div');
+      div.className = 'message ' + sender;
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      if (temp) div.id = 'temp';
+    }
+  </script>
+</body>
+</html>
